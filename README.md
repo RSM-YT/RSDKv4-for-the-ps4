@@ -14,11 +14,19 @@
 - Requires `libScePigletv2VSH.sprx` and `libSceShaccVSH.sprx` (place in `sce_module/` or `/data/self/system/common/lib/`)
 - Uses a custom authinfo for canvas/compositor access
 
+### **Setup**
+- Needs a jailbroken ps4, your own copy of sonic 1/2's data.rsdk and GoldHen. Ps5 not tested.
+- Run the application once. It will create the necessary folders. And crash.
+- Then put your data.rsdk file into the newly created RSDKv4 folder in /data
+- Run the application once. if it fails to load, reboot and run it 1-3 times
+- If it still fails to load then create the directories: </data/self/system/common/lib> and drag both .sprx files in there
+  
 ### Status
 - Gameplay and rendering working
 - Title screen and stages load
 - Audio device selection still needs work (SDL reports invalid device IDs)
 - Incomplete mods that omit scripts will fail to load those objects unless a bytecode fallback is added
+- Proper mod support in progress.
 
 ### Credits
 - Original RSDKv4 / Sonic 1 & 2 decompilation teams
@@ -27,7 +35,4 @@
 - Everyone who documented the canvas authinfo and module loading requirements
 
 ---
-
-You can drop this straight into a README.md or use a shorter version as the GitHub repository description:
-
-> Native RSDKv4 (Retro Engine) port for PS4 using OpenOrbis + Piglet. Software renderer with GLES presentation, 1080p, mod folder support.
+Hope you enjoy! took 6 months to do.

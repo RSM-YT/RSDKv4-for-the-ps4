@@ -1,4 +1,4 @@
-#**RSDKv4 PS4 Port**
+# **RSDKv4 PS4 Port**
 ## Native port of the Retro Engine v4 (RSDKv4) to PlayStation 4 using OpenOrbis and Piglet (OpenGL ES 2.0).
 
 ### Features

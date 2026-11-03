@@ -89,6 +89,7 @@ void CopyAliasStr(char *dest, char *text, bool arrayIndex);
 bool CheckOpcodeType(char *text); // Never actually used
 
 void ParseScriptFile(char *scriptName, int scriptID);
+void RegisterScriptFunctionNames(char *scriptName);
 #endif
 void LoadBytecode(int stageListID, int scriptID);
 

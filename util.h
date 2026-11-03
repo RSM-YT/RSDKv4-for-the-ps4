@@ -17,7 +17,7 @@ bool patch_module(OrbisKernelModule module, module_patch_cb_t* cb, void* arg);
 
 void hexdump(const void* data, size_t size);
 
-void send_notify(const char* format, ...);
+int send_notify(const char* format, ...);
 
 #ifdef __cplusplus
 }

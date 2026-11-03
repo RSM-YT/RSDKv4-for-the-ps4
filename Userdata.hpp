@@ -9,9 +9,9 @@
 #define SAVEDATA_SIZE (0x2000)
 
 #if RETRO_USE_MOD_LOADER
-#define NATIIVEFUNCTION_COUNT (0x30)
+#define NATIIVEFUNCTION_COUNT (0x40)
 #else
-#define NATIIVEFUNCTION_COUNT (0x10)
+#define NATIIVEFUNCTION_COUNT (0x20)
 #endif
 
 #define intToVoid(x) (void *)(size_t)(x)

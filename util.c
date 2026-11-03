@@ -68,7 +68,7 @@ err:
 	return false;
 }
 
-void send_notify(const char* format, ...) {
+int send_notify(const char* format, ...) {
 	OrbisNotificationRequest req;
 	va_list args;
 
@@ -82,7 +82,11 @@ void send_notify(const char* format, ...) {
 		va_end(args);
 	}
 
-	sceKernelSendNotificationRequest(0, &req, sizeof(req), 1);
+	int result = sceKernelSendNotificationRequest(0, &req, sizeof(req), 1);
+	if (result < 0) {
+		EPRINTF("sceKernelSendNotificationRequest failed: 0x%08X\n", result);
+	}
+	return result;
 }
 
 void hexdump(const void* data, size_t size) {

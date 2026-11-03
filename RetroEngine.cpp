@@ -1,4 +1,9 @@
 #include <RetroEngine.hpp>
+#if RETRO_PLATFORM == RETRO_PS4
+#include <orbis/Pad.h>
+#include <orbis/UserService.h>
+#include "util.h"
+#endif
 #if !RETRO_USE_ORIGINAL_CODE
 bool usingCWD        = false;
 bool engineDebugMode = false;
@@ -8,6 +13,116 @@ bool engineDebugMode = false;
 #endif
 
 RetroEngine Engine = RetroEngine();
+
+#if RETRO_PLATFORM == RETRO_PS4
+namespace {
+int GetPS4ControllerHandle(int controllerIndex)
+{
+    static bool padInitialized = false;
+    static int userID = -1;
+    static int handles[4] = { -1, -1, -1, -1 };
+
+    if (controllerIndex < 0 || controllerIndex >= (int)ARRAY_SIZE(handles))
+        return -1;
+
+    if (!padInitialized) {
+        int result = scePadInit();
+        if (result < 0)
+            return result;
+        padInitialized = true;
+    }
+
+    if (userID < 0) {
+        int result = sceUserServiceGetInitialUser(&userID);
+        if (result < 0)
+            return result;
+    }
+
+    if (handles[controllerIndex] < 0) {
+        int handle = scePadOpen(userID, ORBIS_PAD_PORT_TYPE_STANDARD, controllerIndex, nullptr);
+        if (handle < 0)
+            return handle;
+        handles[controllerIndex] = handle;
+    }
+
+    return handles[controllerIndex];
+}
+
+int ClampPS4Output(int value)
+{
+    if (value < 0)
+        return 0;
+    if (value > 0xFF)
+        return 0xFF;
+    return value;
+}
+
+void PS4ShowNotification(int *result, char *message)
+{
+    if (!result || !message)
+        return;
+    *result = send_notify("%s", message);
+}
+
+void PS4SetControllerVibration(int *controllerIndex, int *largeMotor, int *smallMotor, int *result)
+{
+    if (!controllerIndex || !largeMotor || !smallMotor || !result)
+        return;
+
+    int handle = GetPS4ControllerHandle(*controllerIndex);
+    if (handle < 0) {
+        *result = handle;
+        PrintLog("PS4 controller open failed: 0x%08X", handle);
+        return;
+    }
+
+    OrbisPadVibeParam vibration = {};
+    vibration.lgMotor = (uint8_t)ClampPS4Output(*largeMotor);
+    vibration.smMotor = (uint8_t)ClampPS4Output(*smallMotor);
+    *result = scePadSetVibration(handle, &vibration);
+    if (*result < 0)
+        PrintLog("PS4 controller vibration failed: 0x%08X", *result);
+}
+
+void PS4SetControllerLEDColour(int *controllerIndex, int *red, int *green, int *blue)
+{
+    if (!controllerIndex || !red || !green || !blue)
+        return;
+
+    int handle = GetPS4ControllerHandle(*controllerIndex);
+    if (handle < 0) {
+        PrintLog("PS4 controller open failed: 0x%08X", handle);
+        return;
+    }
+
+    OrbisPadColor colour = {};
+    colour.r = (uint8_t)ClampPS4Output(*red);
+    colour.g = (uint8_t)ClampPS4Output(*green);
+    colour.b = (uint8_t)ClampPS4Output(*blue);
+    colour.a = 0xFF;
+    int result = scePadSetLightBar(handle, &colour);
+    if (result < 0)
+        PrintLog("PS4 controller light bar update failed: 0x%08X", result);
+}
+
+void PS4ResetControllerLED(int *controllerIndex, int *result)
+{
+    if (!controllerIndex || !result)
+        return;
+
+    int handle = GetPS4ControllerHandle(*controllerIndex);
+    if (handle < 0) {
+        *result = handle;
+        PrintLog("PS4 controller open failed: 0x%08X", handle);
+        return;
+    }
+
+    *result = scePadResetLightBar(handle);
+    if (*result < 0)
+        PrintLog("PS4 controller light bar reset failed: 0x%08X", *result);
+}
+}
+#endif
 
 #if !RETRO_USE_ORIGINAL_CODE
 inline int GetLowerRate(int intendRate, int targetRate)
@@ -314,7 +429,7 @@ void RetroEngine::Init()
     StrAdd(dest, Engine.dataFile[0]);
     CheckRSDKFile(dest);
 #elif RETRO_PLATFORM == RETRO_PS4
-    StrCopy(dest, "/data/RSDKv4/");
+    StrCopy(dest, BASE_PATH);
     StrAdd(dest, Engine.dataFile[0]);
     printf("Promised RSDK file: %s\n", dest);
     int luck = CheckRSDKFile(dest);
@@ -332,7 +447,7 @@ void RetroEngine::Init()
     }
 #else
 
-    StrCopy(dest, "/data/RSDKv4/");
+    StrCopy(dest, BASE_PATH);
     StrAdd(dest, Engine.dataFile[0]);
     printf("Promised RSDK file: %s\n", dest);
     int luck = CheckRSDKFile(dest);
@@ -535,12 +650,12 @@ void RetroEngine::Init()
         sprintf(rootDir, "%s/", gamePath);
 #elif RETRO_PLATFORM == RETRO_PS4
         // FIX: Force the explicit sandboxed directory mapping path for the PS4
-        sprintf(rootDir, "/data/RSDKv4/");
+        sprintf(rootDir, "%s", BASE_PATH);
         printf("Root Directory: %s\n", rootDir);
 #else
         sprintf(rootDir, "%s", "");
 #endif
-        sprintf(pathBuffer, "/data/RSDKv4/usage.txt");
+        sprintf(pathBuffer, "%susage.txt", BASE_PATH);
         printf("Usage information will be saved to: %s\n", pathBuffer);
 
         FileIO *f;
@@ -1384,6 +1499,13 @@ bool RetroEngine::LoadGameConfig(const char *filePath)
     AddNativeFunction("SetModActive", SetModActive);
     AddNativeFunction("MoveMod", MoveMod);
     AddNativeFunction("RefreshEngine", RefreshEngine); // Reload engine after changing mod status
+#endif
+
+#if RETRO_PLATFORM == RETRO_PS4
+    AddNativeFunction("PS4ShowNotification", PS4ShowNotification);
+    AddNativeFunction("PS4SetControllerVibration", PS4SetControllerVibration);
+    AddNativeFunction("PS4SetControllerLEDColour", PS4SetControllerLEDColour);
+    AddNativeFunction("PS4ResetControllerLED", PS4ResetControllerLED);
 #endif
 
 #if !RETRO_USE_ORIGINAL_CODE

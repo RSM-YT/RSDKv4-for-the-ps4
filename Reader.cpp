@@ -233,9 +233,20 @@ bool LoadFile(const char *filePath, FileInfo *fileInfo)
             }
 
             if (!forceFolder) {
-                forceFolder = true;
-                addPath = true;
-                StrCopy(filePathBuf, fStr.c_str());
+                std::string externalScriptPath;
+                std::string relativeScriptPath = fStr.substr(strlen("Scripts/"));
+                if (GetExternalScriptPath(relativeScriptPath.c_str(), externalScriptPath)
+                    && externalScriptPath.size() < sizeof(filePathBuf)) {
+                    forceFolder = true;
+                    addPath = false;
+                    StrCopy(filePathBuf, externalScriptPath.c_str());
+                    PrintLog("Resolved script '%s' from '%s'.", filePath, externalScriptPath.c_str());
+                }
+                else {
+                    forceFolder = true;
+                    addPath = true;
+                    StrCopy(filePathBuf, fStr.c_str());
+                }
             }
             Engine.usingDataFile = false;
         }

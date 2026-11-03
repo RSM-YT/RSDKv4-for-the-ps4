@@ -510,7 +510,7 @@ void RecordsScreen_Main(void *objPtr)
             if (self->buttons[RECORDSSCREEN_BUTTON_PLAY]->state == PUSHBUTTON_STATE_UNSELECTED) {
                 SetGlobalVariableByName("options.saveSlot", 0);
                 SetGlobalVariableByName("options.gameMode", 2);
-                SetGlobalVariableByName("player.lives", 1);
+                SetGlobalVariableByName("player.lives", 3);
                 SetGlobalVariableByName("player.score", 0);
                 SetGlobalVariableByName("player.scoreBonus", 50000);
                 SetGlobalVariableByName("specialStage.listPos", 0);

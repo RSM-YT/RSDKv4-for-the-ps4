@@ -151,6 +151,7 @@ void ProcessStage(void)
             vertexCount                  = 0;
             faceCount                    = 0;
             frameCounter                 = 0;
+            Engine.frameCount            = 0;
             pauseEnabled                 = false;
             timeEnabled                  = false;
             stageMilliseconds            = 0;
@@ -597,6 +598,9 @@ void ProcessStage(void)
             break;
 #endif
     }
+#if !RETRO_USE_ORIGINAL_CODE
+    Engine.frameCount++;
+#endif
 }
 
 void ProcessParallaxAutoScroll()
@@ -672,8 +676,7 @@ void LoadStageFiles(void)
             }
             SetFileInfo(&bytecodeInfo);
 
-            if (bytecodeExists) {
-                int globalScriptID = scriptID;
+            if (bytecodeExists && !forceUseScripts) {
 #else
             if (Engine.usingBytecode) {
 #endif
@@ -682,23 +685,6 @@ void LoadStageFiles(void)
                 LoadBytecode(4, scriptID);
                 scriptID += globalObjectCount;
                 SetFileInfo(&infoStore);
-#if RETRO_USE_COMPILER && !RETRO_USE_ORIGINAL_CODE
-                if (forceUseScripts) {
-                    for (byte i = 0; i < globalObjectCount; ++i) {
-                        FileRead(&fileBuffer2, 1);
-                        FileRead(strBuffer, fileBuffer2);
-                        strBuffer[fileBuffer2] = 0;
-                        if (HasModScript(strBuffer)) {
-                            GetFileInfo(&infoStore);
-                            CloseFile();
-                            ParseScriptFile(strBuffer, globalScriptID + i);
-                            SetFileInfo(&infoStore);
-                            if (Engine.gameMode == ENGINE_SCRIPTERROR)
-                                return;
-                        }
-                    }
-                }
-#endif
             }
             else {
                 for (byte i = 0; i < globalObjectCount; ++i) {
@@ -802,30 +788,19 @@ void LoadStageFiles(void)
             }
             SetFileInfo(&bytecodeInfo);
 
-            if (bytecodeExists) {
+            if (bytecodeExists && !forceUseScripts) {
 #else
             if (Engine.usingBytecode) {
 #endif
-                GetFileInfo(&infoStore);
-                CloseFile();
-                LoadBytecode(activeStageList, scriptID);
-                SetFileInfo(&infoStore);
-
                 for (byte i = 0; i < stageObjectCount; ++i) {
                     FileRead(&fileBuffer2, 1);
                     FileRead(strBuffer, fileBuffer2);
                     strBuffer[fileBuffer2] = 0;
-#if RETRO_USE_COMPILER && !RETRO_USE_ORIGINAL_CODE
-                    if (forceUseScripts && HasModScript(strBuffer)) {
-                        GetFileInfo(&infoStore);
-                        CloseFile();
-                        ParseScriptFile(strBuffer, scriptID + i);
-                        SetFileInfo(&infoStore);
-                        if (Engine.gameMode == ENGINE_SCRIPTERROR)
-                            return;
-                    }
-#endif
                 }
+                GetFileInfo(&infoStore);
+                CloseFile();
+                LoadBytecode(activeStageList, scriptID);
+                SetFileInfo(&infoStore);
             }
             else {
                 for (byte i = 0; i < stageObjectCount; ++i) {

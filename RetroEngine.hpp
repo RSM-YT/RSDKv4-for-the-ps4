@@ -322,7 +322,7 @@ typedef unsigned int uint;
 
 #ifndef BASE_PATH
 #define BASE_PATH "/data/RSDKv4/"
-#define MOD_PATH "/data/RSDKv4/"
+#define MOD_PATH BASE_PATH
 #endif
 
 #if !defined(RETRO_USE_SDL2) && !defined(RETRO_USE_SDL1)
@@ -731,6 +731,7 @@ public:
     int screenRefreshRate = 60; // hardware screen update rate
     int targetRefreshRate = 60; // game logic update rate
 
+    uint frameCount = 0;
     int renderFrameIndex = 0;
     int skipFrameIndex   = 0;
 

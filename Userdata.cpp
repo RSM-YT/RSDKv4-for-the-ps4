@@ -56,7 +56,7 @@ bool ReadSaveRAMData()
 #elif RETRO_PLATFORM == RETRO_iOS
     sprintf(buffer, "%s/%sSData.bin", redirectSave ? modsPath : getDocumentsPath(), savePath);
 #elif RETRO_PLATFORM == RETRO_PS4
-    sprintf(buffer, "/data/RSDKv4/SData.bin");
+    sprintf(buffer, "%sSData.bin", BASE_PATH);
     printf("Using PS4 save path: %s\n", buffer);
 #else
     sprintf(buffer, "%s%sSData.bin", redirectSave ? MOD_PATH : BASE_PATH, savePath);
@@ -89,7 +89,7 @@ bool ReadSaveRAMData()
 #elif RETRO_PLATFORM == RETRO_iOS
         sprintf(buffer, "%s/%sSGame.bin", redirectSave ? modsPath : getDocumentsPath(), savePath);
 #elif RETRO_PLATFORM == RETRO_PS4
-        sprintf(buffer, "/data/RSDKv4/SGame.bin");
+        sprintf(buffer, "%sSGame.bin", BASE_PATH);
 		printf("Using PS4 save game path: %s\n", buffer);
 #else
         sprintf(buffer, "%s%sSGame.bin", redirectSave ? MOD_PATH : BASE_PATH, savePath);
@@ -135,7 +135,7 @@ bool WriteSaveRAMData()
 #elif RETRO_PLATFORM == RETRO_iOS
         sprintf(buffer, "%s/%sSData.bin", redirectSave ? modsPath : getDocumentsPath(), savePath);
 #elif RETRO_PLATFORM == RETRO_PS4
-        sprintf(buffer, "/data/RSDKv4/SData.bin");
+        sprintf(buffer, "%sSData.bin", BASE_PATH);
         printf("Using PS4 save data path: %s\n", buffer);
 #else
         sprintf(buffer, "%s%sSData.bin", redirectSave ? modsPath : gamePath, savePath);
@@ -167,7 +167,7 @@ bool WriteSaveRAMData()
 #elif RETRO_PLATFORM == RETRO_iOS
         sprintf(buffer, "%s/%sSGame.bin", redirectSave ? modsPath : getDocumentsPath(), savePath);
 #elif RETRO_PLATFORM == RETRO_PS4
-        sprintf(buffer, "/data/RSDKv4/SGame.bin");
+        sprintf(buffer, "%sSGame.bin", BASE_PATH);
 		printf("Using PS4 save game path: %s\n", buffer);
 #else
         sprintf(buffer, "%s%sSGame.bin", redirectSave ? modsPath : gamePath, savePath);
@@ -204,7 +204,7 @@ void InitUserdata()
     printf("should NOT show any directories!\n");
 #if RETRO_USE_MOD_LOADER
 #if RETRO_PLATFORM == RETRO_PS4
-    sprintf(modsPath, "/data/RSDKv4/");
+    sprintf(modsPath, "%s", BASE_PATH);
 #else
     sprintf(modsPath, "%s", MOD_PATH);
 #endif
@@ -248,10 +248,10 @@ void InitUserdata()
 #elif RETRO_PLATFORM == RETRO_OSX || RETRO_PLATFORM == RETRO_ANDROID
     sprintf(buffer, "%s/settings.ini", gamePath);
 #elif RETRO_PLATFORM == RETRO_PS4
-    sprintf(buffer, "/data/RSDKv4/settings.ini");
+    sprintf(buffer, "%ssettings.ini", BASE_PATH);
 	printf("Settings Path: %s\n", buffer);
 #else
-    sprintf(buffer, "/data/RSDKv4/settings.ini");
+    sprintf(buffer, "%ssettings.ini", BASE_PATH);
 	printf("Settings Path: %s\n", buffer);
 #endif
     FileIO *file = fOpen(buffer, "rb");
@@ -660,10 +660,10 @@ void InitUserdata()
 #elif RETRO_PLATFORM == RETRO_OSX || RETRO_PLATFORM == RETRO_ANDROID
     sprintf(buffer, "%s/controllerdb.txt", gamePath);
 #elif RETRO_PLATFORM == RETRO_PS4
-    sprintf(buffer, "/data/RSDKv4/controllerdb.txt");
+    sprintf(buffer, "%scontrollerdb.txt", BASE_PATH);
 	printf("ControllerDB Path: %s\n", buffer);
 #else
-    sprintf(buffer, BASE_PATH "controllerdb.txt");
+    sprintf(buffer, "%scontrollerdb.txt", BASE_PATH);
 #endif
     file = fOpen(buffer, "rb");
     if (file) {
@@ -683,7 +683,7 @@ void InitUserdata()
 #elif RETRO_PLATFORM == RETRO_OSX
     sprintf(buffer, "%s/UData.bin", gamePath);
 #elif RETRO_PLATFORM == RETRO_PS4
-    sprintf(buffer, "/data/RSDKv4/UData.bin");
+    sprintf(buffer, "%sUData.bin", BASE_PATH);
 	printf("UData Path: %s\n", buffer);
 #else
     sprintf(buffer, "%sUData.bin", gamePath);
@@ -833,7 +833,7 @@ void WriteSettings()
 #elif RETRO_PLATFORM == RETRO_OSX
     sprintf(buffer, "%s/settings.ini", gamePath);
 #elif RETRO_PLATFORM == RETRO_PS4
-    sprintf(buffer, "/data/RSDKv4/settings.ini");
+    sprintf(buffer, "%ssettings.ini", BASE_PATH);
 	printf("Settings Path: %s\n", buffer);
 #else
     sprintf(buffer, "%ssettings.ini", gamePath);
@@ -856,7 +856,7 @@ void ReadUserdata()
 #elif RETRO_PLATFORM == RETRO_iOS
     sprintf(buffer, "%s/%sUData.bin", redirectSave ? modsPath : getDocumentsPath(), savePath);
 #elif RETRO_PLATFORM == RETRO_PS4
-    sprintf(buffer, "/data/RSDKv4/UData.bin");
+    sprintf(buffer, "%sUData.bin", BASE_PATH);
 	printf("UData Path: %s\n", buffer);
 #else
     sprintf(buffer, "%s%sUData.bin", redirectSave ? modsPath : gamePath, savePath);
@@ -914,7 +914,7 @@ void WriteUserdata()
 #elif RETRO_PLATFORM == RETRO_iOS
     sprintf(buffer, "%s/%sUData.bin", redirectSave ? modsPath : getDocumentsPath(), savePath);
 #elif RETRO_PLATFORM == RETRO_PS4
-    sprintf(buffer, "/data/RSDKv4/UData.bin");
+    sprintf(buffer, "%sUData.bin", BASE_PATH);
 	printf("UData Path: %s\n", buffer);
 #else
     sprintf(buffer, "%s%sUData.bin", redirectSave ? modsPath : gamePath, savePath);

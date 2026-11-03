@@ -37,6 +37,7 @@ extern byte fadeA;
 extern byte fadeR;
 extern byte fadeG;
 extern byte fadeB;
+extern int fadeX;
 
 extern int paletteMode;
 
@@ -134,6 +135,15 @@ inline void SetFade(byte R, byte G, byte B, ushort A)
     fadeG    = G;
     fadeB    = B;
     fadeA    = A > 0xFF ? 0xFF : A;
+}
+
+inline void SetClassicFade(int R, int G, int B, int A)
+{
+    fadeMode = 2;
+    fadeR    = (byte)R;
+    fadeG    = (byte)G;
+    fadeB    = (byte)B;
+    fadeX    = A < 0 ? 0 : (A > 0xFF ? 0xFF : A);
 }
 
 #if RETRO_REV00

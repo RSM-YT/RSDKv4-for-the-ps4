@@ -32,78 +32,78 @@ void RSDKv4(int i)
     printf("Function Stack: RSDKv4\n");
 		mkdir("/data", 0777);
     
-	mkdir("/data/RSDKv4", 0777);
+	mkdir(BASE_PATH, 0777);
     printf("Initializing RSDKv4 directory...\n");
-	mkdir("/data/RSDKv4/mods", 0777);
+	mkdir(BASE_PATH "mods", 0777);
     printf("Initializing Mods directory...\n");
-    mkdir("/data/RSDKv4/Sonic1", 0777);
+    mkdir(BASE_PATH "Sonic1", 0777);
     printf("Initializing Sonic1 directory...\n");
-	mkdir("/data/RSDKv4/Sonic2", 0777);
+	mkdir(BASE_PATH "Sonic2", 0777);
     printf("Initializing Sonic2 directory...\n");
     // Ensure required data files exist to avoid missing-file errors on startup
     // Create default settings.ini, controllerdb.txt, UData.bin and mods/modconfig.ini if absent
     {
         FILE *f = NULL;
         // settings.ini
-        f = fopen("/data/RSDKv4/settings.ini", "r");
+        f = fopen(BASE_PATH "settings.ini", "r");
         if (!f) {
-            f = fopen("/data/RSDKv4/settings.ini", "w");
+            f = fopen(BASE_PATH "settings.ini", "w");
             if (f) {
                 fprintf(f, "[Dev]\nDevMenu=0\nEngineDebugMode=0\nTxtScripts=0\nStartingCategory=255\nStartingScene=255\nStartingPlayer=255\nStartingSaveFile=255\nFastForwardSpeed=8\n\n");
                 fprintf(f, "[Game]\nLanguage=0\nGameType=0\nSkipStartMenu=0\nDisableFocusPause=0\n\n");
                 fprintf(f, "[Window]\nFullScreen=0\nBorderless=0\nVSync=0\nScalingMode=0\nWindowScale=2\nScreenWidth=424\nRefreshRate=60\nDimLimit=300\n\n");
                 fprintf(f, "[Audio]\nBGMVolume=1.0\nSFXVolume=1.0\n");
                 fclose(f);
-                printf("Created default /data/RSDKv4/settings.ini\n");
+                printf("Created default " BASE_PATH "settings.ini\n");
             }
         }
         else
             fclose(f);
 
         // controllerdb.txt
-        f = fopen("/data/RSDKv4/controllerdb.txt", "r");
+        f = fopen(BASE_PATH "controllerdb.txt", "r");
         if (!f) {
-            f = fopen("/data/RSDKv4/controllerdb.txt", "w");
+            f = fopen(BASE_PATH "controllerdb.txt", "w");
             if (f) {
                 // empty default
                 fprintf(f, "# controller mappings\n");
                 fclose(f);
-                printf("Created default /data/RSDKv4/controllerdb.txt\n");
+                printf("Created default " BASE_PATH "controllerdb.txt\n");
             }
         }
         else
             fclose(f);
 
         // mods/modconfig.ini
-        f = fopen("/data/RSDKv4/mods/modconfig.ini", "r");
+        f = fopen(BASE_PATH "mods/modconfig.ini", "r");
         if (!f) {
-            f = fopen("/data/RSDKv4/mods/modconfig.ini", "w");
+            f = fopen(BASE_PATH "mods/modconfig.ini", "w");
             if (f) {
                 fprintf(f, "; mod configuration file\n");
                 fclose(f);
-                printf("Created default /data/RSDKv4/mods/modconfig.ini\n");
+                printf("Created default " BASE_PATH "mods/modconfig.ini\n");
             }
         }
         else
             fclose(f);
 
         // UData.bin (user data) - create empty binary file if missing
-        f = fopen("/data/RSDKv4/UData.bin", "rb");
+        f = fopen(BASE_PATH "UData.bin", "rb");
         if (!f) {
-            f = fopen("/data/RSDKv4/UData.bin", "wb");
+            f = fopen(BASE_PATH "UData.bin", "wb");
             if (f) {
                 unsigned char zero = 0;
                 fwrite(&zero, 1, 1, f);
                 fclose(f);
-                printf("Created default /data/RSDKv4/UData.bin\n");
+                printf("Created default " BASE_PATH "UData.bin\n");
             }
         }
         else
             fclose(f);
     }
 
-    chdir("/data/RSDKv4");
-    printf("Changed main directory to /data/RSDKv4.\n");
+    chdir(BASE_PATH);
+    printf("Changed main directory to " BASE_PATH "\n");
 }
 void parseArguments(int argc, char *argv[])
 {

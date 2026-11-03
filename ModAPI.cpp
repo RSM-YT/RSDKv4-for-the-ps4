@@ -40,7 +40,7 @@ fs::path resolvePath(fs::path given)
     // Resolve relative paths with a safe fallback for platforms where getcwd()/current_path() is not available
 #if RETRO_PLATFORM == RETRO_PS4
     if (given.is_relative()) {
-        return fs::path("/data/RSDKv4") / given;
+        return fs::path(BASE_PATH) / given;
     }
     return given;
 #else
@@ -51,9 +51,9 @@ fs::path resolvePath(fs::path given)
         try {
             base = fs::current_path();
         } catch (const fs::filesystem_error &fe) {
-            PrintLog("WARNING: current_path() failed, falling back to /data/RSDKv4\n");
+            PrintLog("WARNING: current_path() failed, falling back to " BASE_PATH "\n");
             PrintLog(fe.what());
-            base = fs::path("/data/RSDKv4");
+            base = fs::path(BASE_PATH);
         }
         given = base / given;
         // Second attempt for the weird double-call behavior in original code
@@ -441,7 +441,39 @@ bool HasModScript(const char *scriptName)
     if (!scriptName || !scriptName[0])
         return false;
 
-    return HasModFile(("Data/Scripts/" + std::string(scriptName)).c_str());
+    if (HasModFile(("Data/Scripts/" + std::string(scriptName)).c_str()))
+        return true;
+
+    std::string scriptPath;
+    return GetExternalScriptPath(scriptName, scriptPath);
+}
+
+bool GetExternalScriptPath(const char *scriptName, std::string &scriptPath)
+{
+    if (!scriptName || !scriptName[0])
+        return false;
+
+    std::string relativePath = scriptName;
+    for (char &character : relativePath) {
+        if (character == '\\')
+            character = '/';
+    }
+
+    if (relativePath.find("..") != std::string::npos || relativePath[0] == '/')
+        return false;
+
+#if RETRO_PLATFORM == RETRO_PS4
+    scriptPath = std::string(BASE_PATH) + "Scripts/" + relativePath;
+#else
+    scriptPath = "Scripts/" + relativePath;
+#endif
+
+    FileIO *scriptFile = fOpen(scriptPath.c_str(), "rb");
+    if (!scriptFile)
+        return false;
+
+    fClose(scriptFile);
+    return true;
 }
 
 void SaveMods()

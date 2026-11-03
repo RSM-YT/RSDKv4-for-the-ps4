@@ -2,13 +2,14 @@
 #include <cmath>
 #if RETRO_USE_COMPILER
 #if !RETRO_REV00
-#define COMMON_SCRIPT_VAR_COUNT (42)
+#define COMMON_SCRIPT_VAR_COUNT (134)
 #else
-#define COMMON_SCRIPT_VAR_COUNT (41)
+#define COMMON_SCRIPT_VAR_COUNT (133)
 #endif
 #endif
 
 #define SCRIPT_VAR_COUNT (COMMON_SCRIPT_VAR_COUNT + 0x1DF)
+enum ScriptDrawFXValues { SCRIPT_FX_HSCALE = 6, SCRIPT_FX_VSCALE = 7, SCRIPT_FX_ALL = 8 };
 int lineID = 0;
 
 enum ScriptVarType { VAR_ALIAS, VAR_STATICVALUE, VAR_TABLE };
@@ -559,6 +560,8 @@ const FunctionInfo functions[] = {
     FunctionInfo("IsInputSlotAssigned", 1),
     FunctionInfo("ResetInputSlotAssignments", 0),
 #endif
+    FunctionInfo("SetClassicFade", 4),
+    FunctionInfo("ClassicTint", 8),
 };
 
 #if RETRO_USE_COMPILER
@@ -572,6 +575,9 @@ ScriptVariableInfo scriptValueList[SCRIPT_VAR_COUNT] = {
     ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "FX_ROTATE", "1"),
     ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "FX_ROTOZOOM", "2"),
     ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "FX_INK", "3"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "FX_HSCALE", "6"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "FX_VSCALE", "7"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "FX_ALL", "8"),
     ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "PRESENTATION_STAGE", "0"),
     ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "REGULAR_STAGE", "1"),
     ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "BONUS_STAGE", "2"),
@@ -610,6 +616,95 @@ ScriptVariableInfo scriptValueList[SCRIPT_VAR_COUNT] = {
     ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "PRIORITY_INACTIVE", "5"),
     ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "PRIORITY_BOUNDS_SMALL", "6"),
     ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "PRIORITY_ACTIVE_SMALL", "7"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "inputDown.up", "keyDown.up"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "inputDown.down", "keyDown.down"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "inputDown.left", "keyDown.left"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "inputDown.right", "keyDown.right"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "inputDown.buttonA", "keyDown.buttonA"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "inputDown.buttonB", "keyDown.buttonB"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "inputDown.buttonC", "keyDown.buttonC"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "inputDown.buttonX", "keyDown.buttonX"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "inputDown.buttonY", "keyDown.buttonY"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "inputDown.buttonZ", "keyDown.buttonZ"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "inputDown.buttonL", "keyDown.buttonL"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "inputDown.buttonR", "keyDown.buttonR"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "inputDown.start", "keyDown.start"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "inputDown.select", "keyDown.select"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "inputPress.up", "keyPress.up"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "inputPress.down", "keyPress.down"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "inputPress.left", "keyPress.left"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "inputPress.right", "keyPress.right"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "inputPress.buttonA", "keyPress.buttonA"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "inputPress.buttonB", "keyPress.buttonB"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "inputPress.buttonC", "keyPress.buttonC"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "inputPress.buttonX", "keyPress.buttonX"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "inputPress.buttonY", "keyPress.buttonY"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "inputPress.buttonZ", "keyPress.buttonZ"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "inputPress.buttonL", "keyPress.buttonL"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "inputPress.buttonR", "keyPress.buttonR"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "inputPress.start", "keyPress.start"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "inputPress.select", "keyPress.select"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "C_BOX2", "2"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "FLIP_NONE", "0"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "FLIP_X", "1"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "FLIP_Y", "2"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "FLIP_XY", "3"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "STAGE_2P", "4"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "RETRO_STANDARD", "0"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "RETRO_MOBILE", "1"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "INK_NONE", "0"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "INK_BLEND", "1"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "INK_ALPHA", "2"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "INK_ADD", "3"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "INK_SUB", "4"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "CSIDE_FLOOR", "0"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "CSIDE_LWALL", "1"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "CSIDE_RWALL", "2"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "CSIDE_ROOF", "3"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "CMODE_FLOOR", "0"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "CMODE_LWALL", "1"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "CMODE_ROOF", "2"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "CMODE_RWALL", "3"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "COL_NONE", "0"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "COL_TOP", "1"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "COL_LEFT", "2"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "COL_RIGHT", "3"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "COL_BOTTOM", "4"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "PATH_A", "0"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "PATH_B", "1"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "GRAVITY_GROUND", "0"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "GRAVITY_AIR", "1"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "FACE_TEXTURED_3D", "0"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "FACE_TEXTURED_2D", "1"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "FACE_COLOURED_3D", "2"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "FACE_COLOURED_2D", "3"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "FACE_FADED", "4"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "FACE_TEXTURED_C", "5"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "FACE_TEXTURED_D", "6"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "FACE_SPRITE_3D", "7"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "PRIORITY_ACTIVE_BOUNDS", "0"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "PRIORITY_ACTIVE_PAUSED", "2"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "PRIORITY_UNKNOWN", "7"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "TILEINFO_INDEX", "0"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "TILEINFO_DIRECTION", "1"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "TILEINFO_VISUALPLANE", "2"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "TILEINFO_SOLIDITYA", "3"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "TILEINFO_SOLIDITYB", "4"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "TILEINFO_FLAGSA", "5"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "TILEINFO_ANGLEA", "6"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "TILEINFO_FLAGSB", "7"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "TILEINFO_ANGLEB", "8"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "TEXTINFO_TEXTDATA", "0"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "TEXTINFO_TEXTSIZE", "1"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "TEXTINFO_ROWCOUNT", "2"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "ONLINEMENU_ACHIEVEMENTS", "0"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "ONLINEMENU_LEADERBOARDS", "1"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "TILELAYER_NOSCROLL", "0"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "TILELAYER_HSCROLL", "1"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "TILELAYER_VSCROLL", "2"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "TILELAYER_3DFLOOR", "3"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "TILELAYER_3DSKY", "4"),
+    ScriptVariableInfo(VAR_ALIAS, ACCESS_PUBLIC, "GROUP_ALL", "0"),
 };
 // clang-format on
 
@@ -1068,6 +1163,8 @@ enum ScrFunc {
     FUNC_ISSLOTASSIGNED,
     FUNC_RESETINPUTSLOTASSIGNMENTS,
 #endif
+    FUNC_SETCLASSICFADE,
+    FUNC_CLASSICTINT,
     FUNC_MAX_CNT
 };
 
@@ -1141,8 +1238,11 @@ void CheckAliasText(char *text)
 
 #if !RETRO_USE_ORIGINAL_CODE
         for (int v = 0; v < scriptValueListCount; ++v) {
-            if (StrComp(scriptValueList[v].name, variable->name))
+            if (StrComp(scriptValueList[v].name, variable->name)) {
+                if (scriptValueList[v].type == VAR_ALIAS && StrComp(scriptValueList[v].value, variable->value))
+                    return;
                 PrintLog("WARNING: Variable Name '%s' has already been used!", variable->name);
+            }
         }
 #endif
 
@@ -2737,6 +2837,99 @@ bool CheckOpcodeType(char *text)
             return false;
     }
     return true;
+}
+
+static void RegisterScriptFunctionDeclaration(char *line)
+{
+    char compactLine[0x100];
+    int compactPos = 0;
+    for (int i = 0; line[i] && compactPos < (int)sizeof(compactLine) - 1; ++i) {
+        if (line[i] == '/' && line[i + 1] == '/')
+            break;
+        if (line[i] != ' ' && line[i] != '\t' && line[i] != '\r')
+            compactLine[compactPos++] = line[i];
+    }
+    compactLine[compactPos] = 0;
+
+    int nameOffset = 0;
+    byte access   = ACCESS_NONE;
+    bool reserved = false;
+    if (FindStringToken(compactLine, "reservefunction", 1) == 0) {
+        nameOffset = 15;
+        reserved  = true;
+    }
+    else if (FindStringToken(compactLine, "publicfunction", 1) == 0) {
+        nameOffset = 14;
+        access     = ACCESS_PUBLIC;
+    }
+    else if (FindStringToken(compactLine, "privatefunction", 1) == 0) {
+        nameOffset = 15;
+        access     = ACCESS_PRIVATE;
+    }
+    else {
+        return;
+    }
+
+    char functionName[0x20];
+    int nameLength = 0;
+    while (compactLine[nameOffset] && nameLength < (int)sizeof(functionName) - 1)
+        functionName[nameLength++] = compactLine[nameOffset++];
+    functionName[nameLength] = 0;
+    if (!functionName[0])
+        return;
+
+    int functionID = -1;
+    for (int f = 0; f < scriptFunctionCount; ++f) {
+        if (StrComp(functionName, scriptFunctionList[f].name))
+            functionID = f;
+    }
+
+    if (functionID < 0) {
+        if (scriptFunctionCount >= FUNCTION_COUNT)
+            return;
+        functionID = scriptFunctionCount++;
+    }
+
+    StrCopy(scriptFunctionList[functionID].name, functionName);
+    if (!reserved)
+        scriptFunctionList[functionID].access = access;
+}
+
+void RegisterScriptFunctionNames(char *scriptName)
+{
+    for (int f = 0; f < scriptFunctionCount; ++f) {
+        if (scriptFunctionList[f].access != ACCESS_PUBLIC)
+            StrCopy(scriptFunctionList[f].name, "");
+    }
+
+    char scriptPath[0x40];
+    StrCopy(scriptPath, "Data/Scripts/");
+    StrAdd(scriptPath, scriptName);
+
+    FileInfo info;
+    if (!LoadFile(scriptPath, &info))
+        return;
+
+    char line[0x100];
+    int linePos = 0;
+    while (!ReachedEndOfFile()) {
+        char curChar = 0;
+        FileRead(&curChar, 1);
+        if (curChar == '\n' || curChar == '\r' || curChar == ';') {
+            line[linePos] = 0;
+            RegisterScriptFunctionDeclaration(line);
+            linePos = 0;
+        }
+        else if (linePos < (int)sizeof(line) - 1) {
+            line[linePos++] = curChar;
+        }
+    }
+
+    if (linePos > 0) {
+        line[linePos] = 0;
+        RegisterScriptFunctionDeclaration(line);
+    }
+    CloseFile();
 }
 
 void ParseScriptFile(char *scriptName, int scriptID)
@@ -4478,6 +4671,11 @@ void ProcessScript(int scriptCodeStart, int jumpTableStart, byte scriptEvent)
                 opcodeSize = 0;
                 DrawTintRectangle(scriptEng.operands[0], scriptEng.operands[1], scriptEng.operands[2], scriptEng.operands[3]);
                 break;
+            case FUNC_CLASSICTINT:
+                opcodeSize = 0;
+                DrawClassicFade(scriptEng.operands[0], scriptEng.operands[1], scriptEng.operands[2], scriptEng.operands[3],
+                                scriptEng.operands[4], scriptEng.operands[5], scriptEng.operands[6], scriptEng.operands[7]);
+                break;
             case FUNC_DRAWNUMBERS: {
                 opcodeSize = 0;
                 int i      = 10;
@@ -4703,6 +4901,10 @@ void ProcessScript(int scriptCodeStart, int jumpTableStart, byte scriptEvent)
                 opcodeSize = 0;
                 SetFade(scriptEng.operands[0], scriptEng.operands[1], scriptEng.operands[2], scriptEng.operands[3]);
                 break;
+            case FUNC_SETCLASSICFADE:
+                opcodeSize = 0;
+                SetClassicFade(scriptEng.operands[0], scriptEng.operands[1], scriptEng.operands[2], scriptEng.operands[3]);
+                break;
             case FUNC_SETACTIVEPALETTE:
                 opcodeSize = 0;
                 SetActivePalette(scriptEng.operands[0], scriptEng.operands[1], scriptEng.operands[2]);
@@ -4822,6 +5024,24 @@ void ProcessScript(int scriptCodeStart, int jumpTableStart, byte scriptEvent)
                                 break;
                         }
                         break;
+                    case SCRIPT_FX_HSCALE:
+                        DrawSpriteAllFX(FLIP_NONE, (scriptEng.operands[2] >> 16) - xScrollOffset,
+                                        (scriptEng.operands[3] >> 16) - yScrollOffset, -spriteFrame->pivotX, -spriteFrame->pivotY,
+                                        spriteFrame->sprX, spriteFrame->sprY, spriteFrame->width, spriteFrame->height, 0, entity->scale, 0x200,
+                                        scriptInfo->spriteSheetID, 0xFF, INK_NONE, DRAWFX_HSCALE);
+                        break;
+                    case SCRIPT_FX_VSCALE:
+                        DrawSpriteAllFX(FLIP_NONE, (scriptEng.operands[2] >> 16) - xScrollOffset,
+                                        (scriptEng.operands[3] >> 16) - yScrollOffset, -spriteFrame->pivotX, -spriteFrame->pivotY,
+                                        spriteFrame->sprX, spriteFrame->sprY, spriteFrame->width, spriteFrame->height, 0, 0x200, entity->scale,
+                                        scriptInfo->spriteSheetID, 0xFF, INK_NONE, DRAWFX_VSCALE);
+                        break;
+                    case SCRIPT_FX_ALL:
+                        DrawSpriteAllFX(entity->direction, (scriptEng.operands[2] >> 16) - xScrollOffset,
+                                        (scriptEng.operands[3] >> 16) - yScrollOffset, -spriteFrame->pivotX, -spriteFrame->pivotY,
+                                        spriteFrame->sprX, spriteFrame->sprY, spriteFrame->width, spriteFrame->height, entity->rotation,
+                                        entity->scale, entity->scale, scriptInfo->spriteSheetID, entity->alpha, entity->inkEffect, DRAWFX_ALL);
+                        break;
                 }
                 break;
             case FUNC_DRAWSPRITESCREENFX:
@@ -4908,6 +5128,21 @@ void ProcessScript(int scriptCodeStart, int jumpTableStart, byte scriptEvent)
                                                   spriteFrame->height, spriteFrame->sprX, spriteFrame->sprY, FLIP_XY, scriptInfo->spriteSheetID);
                                 break;
                         }
+                        break;
+                    case SCRIPT_FX_HSCALE:
+                        DrawSpriteAllFX(FLIP_NONE, scriptEng.operands[2], scriptEng.operands[3], -spriteFrame->pivotX, -spriteFrame->pivotY,
+                                        spriteFrame->sprX, spriteFrame->sprY, spriteFrame->width, spriteFrame->height, 0, entity->scale, 0x200,
+                                        scriptInfo->spriteSheetID, 0xFF, INK_NONE, DRAWFX_HSCALE);
+                        break;
+                    case SCRIPT_FX_VSCALE:
+                        DrawSpriteAllFX(FLIP_NONE, scriptEng.operands[2], scriptEng.operands[3], -spriteFrame->pivotX, -spriteFrame->pivotY,
+                                        spriteFrame->sprX, spriteFrame->sprY, spriteFrame->width, spriteFrame->height, 0, 0x200, entity->scale,
+                                        scriptInfo->spriteSheetID, 0xFF, INK_NONE, DRAWFX_VSCALE);
+                        break;
+                    case SCRIPT_FX_ALL:
+                        DrawSpriteAllFX(entity->direction, scriptEng.operands[2], scriptEng.operands[3], -spriteFrame->pivotX, -spriteFrame->pivotY,
+                                        spriteFrame->sprX, spriteFrame->sprY, spriteFrame->width, spriteFrame->height, entity->rotation,
+                                        entity->scale, entity->scale, scriptInfo->spriteSheetID, entity->alpha, entity->inkEffect, DRAWFX_ALL);
                         break;
                 }
                 break;

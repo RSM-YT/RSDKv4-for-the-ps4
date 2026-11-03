@@ -47,6 +47,7 @@ bool LoadMod(ModInfo *info, std::string modsPath, std::string folder, bool activ
 void ScanModFolder(ModInfo *info);
 bool HasModFile(const char *filePath);
 bool HasModScript(const char *scriptName);
+bool GetExternalScriptPath(const char *scriptName, std::string &scriptPath);
 void SaveMods();
 
 void OpenModMenu();

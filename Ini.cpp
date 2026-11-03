@@ -39,7 +39,7 @@ IniParser::IniParser(const char *filename, bool addPath)
         if (filename[0] == '/')
             sprintf(pathBuffer, "%s", filename);
         else
-            sprintf(pathBuffer, "/data/RSDKv4/%s", filename);
+            sprintf(pathBuffer, "%s%s", BASE_PATH, filename);
 #endif
     }
     else {

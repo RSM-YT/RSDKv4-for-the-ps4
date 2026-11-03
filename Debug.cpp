@@ -42,7 +42,7 @@ void PrintLog(const char *msg, ...)
             sprintf(pathBuffer, "%s/log.txt", gamePath);
             __android_log_print(ANDROID_LOG_INFO, "RSDKv4", "%s", buffer);
 #elif RETRO_PLATFORM == RETRO_PS4
-            sprintf(pathBuffer, "/data/RSDKv4/log.txt");
+            sprintf(pathBuffer, "%slog.txt", BASE_PATH);
 #else
             sprintf(pathBuffer, BASE_PATH "log.txt");
 #endif
@@ -79,7 +79,7 @@ void PrintLog(const ushort *msg)
             sprintf(pathBuffer, "%s/log.txt", gamePath);
             __android_log_print(ANDROID_LOG_INFO, "RSDKv4", "%ls", (wchar_t *)msg);
 #elif RETRO_PLATFORM == RETRO_PS4
-            sprintf(pathBuffer, "/data/RSDKv4/log.txt");
+            sprintf(pathBuffer, "%slog.txt", BASE_PATH);
 #else
             sprintf(pathBuffer, BASE_PATH "log.txt");
 #endif

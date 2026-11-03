@@ -2086,14 +2086,20 @@ void DrawStageGFX()
     if (drawStageGFXHQ) {
         CopyFrameOverlay2x();
 
-        if (fadeMode > 0) {
+        if (fadeMode == 1) {
             DrawRectangle(0, 0, SCREEN_XSIZE, SCREEN_YSIZE, fadeR, fadeG, fadeB, fadeA);
             SetFadeHQ(fadeR, fadeG, fadeB, fadeA);
         }
+        else if (fadeMode == 2) {
+            DrawClassicFade(0, 0, SCREEN_XSIZE, SCREEN_YSIZE, fadeR, fadeG, fadeB, fadeX);
+        }
     }
     else {
-        if (fadeMode > 0) {
+        if (fadeMode == 1) {
             DrawRectangle(0, 0, SCREEN_XSIZE, SCREEN_YSIZE, fadeR, fadeG, fadeB, fadeA);
+        }
+        else if (fadeMode == 2) {
+            DrawClassicFade(0, 0, SCREEN_XSIZE, SCREEN_YSIZE, fadeR, fadeG, fadeB, fadeX);
         }
     }
 #endif
@@ -3554,6 +3560,75 @@ void DrawRectangle(int XPos, int YPos, int width, int height, int R, int G, int 
 #endif
 }
 
+static inline void ApplyClassicTintChannel(int &channel, int target, int &remaining)
+{
+    if (remaining <= 0)
+        return;
+
+    int difference = target - channel;
+    if (difference == 0)
+        return;
+
+    int magnitude = difference > 0 ? difference : -difference;
+    if (magnitude >= remaining) {
+        channel += difference > 0 ? remaining : -remaining;
+        remaining = 0;
+    }
+    else {
+        channel = target;
+        remaining -= magnitude;
+    }
+}
+
+void DrawClassicFade(int XPos, int YPos, int width, int height, int R, int G, int B, int A)
+{
+#if RETRO_SOFTWARE_RENDER
+    if (width + XPos > GFX_LINESIZE)
+        width = GFX_LINESIZE - XPos;
+    if (XPos < 0) {
+        width += XPos;
+        XPos = 0;
+    }
+
+    if (height + YPos > SCREEN_YSIZE)
+        height = SCREEN_YSIZE - YPos;
+    if (YPos < 0) {
+        height += YPos;
+        YPos = 0;
+    }
+    if (width <= 0 || height <= 0 || A <= 0)
+        return;
+    if (A > 0xFF)
+        A = 0xFF;
+
+    int classicStrength = (A * 3) >> 3;
+    int pitch = GFX_LINESIZE - width;
+    ushort target = PACK_RGB888(R, G, B);
+    int targetR = (target >> 11) & 0x1F;
+    int targetG = (target >> 5) & 0x3F;
+    int targetB = target & 0x1F;
+    ushort *frameBufferPtr = &Engine.frameBuffer[XPos + GFX_LINESIZE * YPos];
+
+    int h = height;
+    while (h--) {
+        int w = width;
+        while (w--) {
+            ushort source = *frameBufferPtr;
+            int sourceR = (source >> 11) & 0x1F;
+            int sourceG = (source >> 5) & 0x3F;
+            int sourceB = source & 0x1F;
+
+            int remaining = classicStrength;
+            ApplyClassicTintChannel(sourceR, targetR, remaining);
+            ApplyClassicTintChannel(sourceG, targetG, remaining);
+            ApplyClassicTintChannel(sourceB, targetB, remaining);
+            *frameBufferPtr++ = (ushort)((sourceR << 11) | (sourceG << 5) | sourceB);
+        }
+        frameBufferPtr += pitch;
+    }
+#endif
+}
+
 void SetFadeHQ(int R, int G, int B, int A)
 {
 #if RETRO_SOFTWARE_RENDER
@@ -4574,6 +4649,170 @@ void DrawSubtractiveBlendedSprite(int XPos, int YPos, int width, int height, int
 #endif
 }
 
+void DrawSpriteAllFX(int direction, int XPos, int YPos, int pivotX, int pivotY, int sprX, int sprY, int width, int height, int rotation,
+                     int scaleX, int scaleY, int sheetID, int alpha, int ink, int flags)
+{
+#if RETRO_SOFTWARE_RENDER
+    if (sheetID < 0 || sheetID >= SURFACE_COUNT || width <= 0 || height <= 0)
+        return;
+
+    GFXSurface *surface = &gfxSurface[sheetID];
+    if (surface->width <= 0 || surface->height <= 0 || sprX < 0 || sprY < 0 || sprX + width > surface->width
+        || sprY + height > surface->height)
+        return;
+
+    if (!(flags & DRAWFX_HSCALE))
+        scaleX = 0x200;
+    if (!(flags & DRAWFX_VSCALE))
+        scaleY = 0x200;
+    if (scaleX <= 0 || scaleY <= 0)
+        return;
+
+    if (!(flags & DRAWFX_ROTATE))
+        rotation = 0;
+    if (!(flags & DRAWFX_FLIP))
+        direction = FLIP_NONE;
+    else
+        direction &= FLIP_XY;
+    if (!(flags & DRAWFX_INK))
+        ink = INK_NONE;
+
+    if (alpha < 0)
+        alpha = 0;
+    else if (alpha > 0xFF)
+        alpha = 0xFF;
+
+    int angle = rotation & 0x1FF;
+    if (angle)
+        angle = 0x200 - angle;
+    int sine   = sin512LookupTable[angle];
+    int cosine = cos512LookupTable[angle];
+    int xPositions[4];
+    int yPositions[4];
+    const int cornerX[4] = { 0, width, width, 0 };
+    const int cornerY[4] = { 0, 0, height, height };
+
+    for (int i = 0; i < 4; ++i) {
+        int64_t localX = ((int64_t)(cornerX[i] - pivotX) * scaleX) >> 9;
+        int64_t localY = ((int64_t)(cornerY[i] - pivotY) * scaleY) >> 9;
+        xPositions[i]  = XPos + (int)(((int64_t)cosine * localX + (int64_t)sine * localY) >> 9);
+        yPositions[i]  = YPos + (int)(((int64_t)-sine * localX + (int64_t)cosine * localY) >> 9);
+    }
+
+    int left   = xPositions[0];
+    int right  = xPositions[0];
+    int top    = yPositions[0];
+    int bottom = yPositions[0];
+    for (int i = 1; i < 4; ++i) {
+        if (xPositions[i] < left)
+            left = xPositions[i];
+        if (xPositions[i] > right)
+            right = xPositions[i];
+        if (yPositions[i] < top)
+            top = yPositions[i];
+        if (yPositions[i] > bottom)
+            bottom = yPositions[i];
+    }
+
+    if (left < 0)
+        left = 0;
+    if (top < 0)
+        top = 0;
+    if (right > GFX_LINESIZE)
+        right = GFX_LINESIZE;
+    if (bottom > SCREEN_YSIZE)
+        bottom = SCREEN_YSIZE;
+    if (left >= right || top >= bottom)
+        return;
+
+    for (int y = top; y < bottom; ++y) {
+        activePalette   = fullPalette[gfxLineBuffer[y]];
+        activePalette32 = fullPalette32[gfxLineBuffer[y]];
+        ushort *frameBufferPtr = &Engine.frameBuffer[y * GFX_LINESIZE + left];
+
+        for (int x = left; x < right; ++x, ++frameBufferPtr) {
+            int64_t dx = ((int64_t)(x - XPos) << 9) + 0x100;
+            int64_t dy = ((int64_t)(y - YPos) << 9) + 0x100;
+            int64_t localX = ((int64_t)cosine * dx - (int64_t)sine * dy) >> 9;
+            int64_t localY = ((int64_t)sine * dx + (int64_t)cosine * dy) >> 9;
+            int sourceX = (int)(localX * 0x200 / scaleX + ((int64_t)pivotX << 9)) >> 9;
+            int sourceY = (int)(localY * 0x200 / scaleY + ((int64_t)pivotY << 9)) >> 9;
+
+            if (sourceX < 0 || sourceX >= width || sourceY < 0 || sourceY >= height)
+                continue;
+            if (direction & FLIP_X)
+                sourceX = width - 1 - sourceX;
+            if (direction & FLIP_Y)
+                sourceY = height - 1 - sourceY;
+
+            byte pixelIndex = graphicData[surface->dataPosition + sprX + sourceX + (sprY + sourceY) * surface->width];
+            if (!pixelIndex)
+                continue;
+
+            ushort source = activePalette[pixelIndex];
+            ushort dest   = *frameBufferPtr;
+            int sourceR   = (source >> 11) & 0x1F;
+            int sourceG   = (source >> 5) & 0x3F;
+            int sourceB   = source & 0x1F;
+            int destR     = (dest >> 11) & 0x1F;
+            int destG     = (dest >> 5) & 0x3F;
+            int destB     = dest & 0x1F;
+
+            switch (ink) {
+                case INK_BLEND:
+                    *frameBufferPtr = ((source & 0xF7DE) >> 1) + ((dest & 0xF7DE) >> 1);
+                    break;
+                case INK_ALPHA:
+                    *frameBufferPtr = (ushort)((((sourceR * alpha + destR * (0xFF - alpha) + 127) / 0xFF) << 11)
+                                               | (((sourceG * alpha + destG * (0xFF - alpha) + 127) / 0xFF) << 5)
+                                               | ((sourceB * alpha + destB * (0xFF - alpha) + 127) / 0xFF));
+                    break;
+                case INK_ADD: {
+                    int red   = destR + (sourceR * alpha + 127) / 0xFF;
+                    int green = destG + (sourceG * alpha + 127) / 0xFF;
+                    int blue  = destB + (sourceB * alpha + 127) / 0xFF;
+                    if (red > 0x1F)
+                        red = 0x1F;
+                    if (green > 0x3F)
+                        green = 0x3F;
+                    if (blue > 0x1F)
+                        blue = 0x1F;
+                    *frameBufferPtr = (ushort)((red << 11) | (green << 5) | blue);
+                    break;
+                }
+                case INK_SUB: {
+                    int red   = destR - ((0x1F - sourceR) * alpha + 127) / 0xFF;
+                    int green = destG - ((0x3F - sourceG) * alpha + 127) / 0xFF;
+                    int blue  = destB - ((0x1F - sourceB) * alpha + 127) / 0xFF;
+                    if (red < 0)
+                        red = 0;
+                    if (green < 0)
+                        green = 0;
+                    if (blue < 0)
+                        blue = 0;
+                    *frameBufferPtr = (ushort)((red << 11) | (green << 5) | blue);
+                    break;
+                }
+                default: *frameBufferPtr = source; break;
+            }
+        }
+    }
+#else
+    if (flags & DRAWFX_ROTATE) {
+        if (scaleX == scaleY)
+            DrawSpriteRotozoom(direction, XPos, YPos, pivotX, pivotY, sprX, sprY, width, height, rotation, scaleX, sheetID);
+        else
+            DrawSpriteRotated(direction, XPos, YPos, pivotX, pivotY, sprX, sprY, width, height, rotation, sheetID);
+    }
+    else if (flags & (DRAWFX_HSCALE | DRAWFX_VSCALE)) {
+        DrawSpriteScaled(direction, XPos, YPos, pivotX, pivotY, scaleX, scaleY, width, height, sprX, sprY, sheetID);
+    }
+    else {
+        DrawSpriteFlipped(XPos + pivotX, YPos + pivotY, width, height, sprX, sprY, direction, sheetID);
+    }
+#endif
+}
+
 void DrawObjectAnimation(void *objScr, void *ent, int XPos, int YPos)
 {
     ObjectScript *objectScript = (ObjectScript *)objScr;
@@ -4581,6 +4820,64 @@ void DrawObjectAnimation(void *objScr, void *ent, int XPos, int YPos)
     SpriteAnimation *sprAnim   = &animationList[objectScript->animFile->aniListOffset + entity->animation];
     SpriteFrame *frame         = &animFrames[sprAnim->frameListOffset + entity->frame];
     int rotation               = 0;
+
+    if (entity->inkEffect != INK_NONE || entity->scale != 0x200) {
+        int frameID      = entity->frame;
+        int drawRotation = entity->rotation;
+        int drawFlags    = DRAWFX_FLIP | DRAWFX_HSCALE | DRAWFX_VSCALE | DRAWFX_INK;
+
+        switch (sprAnim->rotationStyle) {
+            case ROTSTYLE_NONE: break;
+            case ROTSTYLE_FULL: drawFlags |= DRAWFX_ROTATE; break;
+            case ROTSTYLE_45DEG:
+                drawFlags |= DRAWFX_ROTATE;
+                if (entity->rotation >= 0x100)
+                    drawRotation = 0x200 - ((0x214 - entity->rotation) >> 6 << 6);
+                else
+                    drawRotation = (entity->rotation + 20) >> 6 << 6;
+                break;
+            case ROTSTYLE_STATICFRAMES: {
+                drawFlags |= DRAWFX_ROTATE;
+                if (entity->rotation >= 0x100)
+                    rotation = 8 - ((532 - entity->rotation) >> 6);
+                else
+                    rotation = (entity->rotation + 20) >> 6;
+
+                switch (rotation) {
+                    case 0:
+                    case 8: drawRotation = 0; break;
+                    case 1:
+                        frameID += sprAnim->frameCount;
+                        drawRotation = entity->direction ? 0 : 0x80;
+                        break;
+                    case 2: drawRotation = 0x80; break;
+                    case 3:
+                        frameID += sprAnim->frameCount;
+                        drawRotation = entity->direction ? 0x80 : 0x100;
+                        break;
+                    case 4: drawRotation = 0x100; break;
+                    case 5:
+                        frameID += sprAnim->frameCount;
+                        drawRotation = entity->direction ? 0x100 : 384;
+                        break;
+                    case 6: drawRotation = 384; break;
+                    case 7:
+                        frameID += sprAnim->frameCount;
+                        drawRotation = entity->direction ? 384 : 0;
+                        break;
+                    default: break;
+                }
+
+                frame = &animFrames[sprAnim->frameListOffset + frameID];
+                break;
+            }
+            default: return;
+        }
+
+        DrawSpriteAllFX(entity->direction, XPos, YPos, -frame->pivotX, -frame->pivotY, frame->sprX, frame->sprY, frame->width, frame->height,
+                        drawRotation, entity->scale, entity->scale, frame->sheetID, entity->alpha, entity->inkEffect, drawFlags);
+        return;
+    }
 
     switch (sprAnim->rotationStyle) {
         case ROTSTYLE_NONE:

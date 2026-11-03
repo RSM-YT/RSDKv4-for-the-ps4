@@ -13,6 +13,14 @@
 enum FlipFlags { FLIP_NONE, FLIP_X, FLIP_Y, FLIP_XY };
 enum InkFlags { INK_NONE, INK_BLEND, INK_ALPHA, INK_ADD, INK_SUB };
 enum DrawFXFlags { FX_SCALE, FX_ROTATE, FX_ROTOZOOM, FX_INK, FX_TINT, FX_FLIP };
+enum DrawSpriteAllFXFlags {
+    DRAWFX_FLIP   = 1 << 0,
+    DRAWFX_ROTATE = 1 << 1,
+    DRAWFX_HSCALE = 1 << 2,
+    DRAWFX_VSCALE = 1 << 3,
+    DRAWFX_INK    = 1 << 4,
+    DRAWFX_ALL    = DRAWFX_FLIP | DRAWFX_ROTATE | DRAWFX_HSCALE | DRAWFX_VSCALE | DRAWFX_INK,
+};
 
 struct DrawListEntry {
     int entityRefs[ENTITY_COUNT];
@@ -112,6 +120,7 @@ void Draw3DSkyLayer(int layerID);
 
 // Shape Drawing
 void DrawRectangle(int XPos, int YPos, int width, int height, int R, int G, int B, int A);
+void DrawClassicFade(int XPos, int YPos, int width, int height, int R, int G, int B, int A);
 void SetFadeHQ(int R, int G, int B, int A);
 void DrawTintRectangle(int XPos, int YPos, int width, int height);
 void DrawScaledTintMask(int direction, int XPos, int YPos, int pivotX, int pivotY, int scaleX, int scaleY, int width, int height, int sprX, int sprY,
@@ -133,6 +142,8 @@ void DrawSpriteRotated(int direction, int XPos, int YPos, int pivotX, int pivotY
                        int sheetID);
 void DrawSpriteRotozoom(int direction, int XPos, int YPos, int pivotX, int pivotY, int sprX, int sprY, int width, int height, int rotation, int scale,
                         int sheetID);
+void DrawSpriteAllFX(int direction, int XPos, int YPos, int pivotX, int pivotY, int sprX, int sprY, int width, int height, int rotation,
+                     int scaleX, int scaleY, int sheetID, int alpha, int ink, int flags);
 
 void DrawBlendedSprite(int XPos, int YPos, int width, int height, int sprX, int sprY, int sheetID);
 void DrawAlphaBlendedSprite(int XPos, int YPos, int width, int height, int sprX, int sprY, int alpha, int sheetID);

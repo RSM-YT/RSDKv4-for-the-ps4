@@ -1,6 +1,5 @@
 #include <RetroEngine.hpp>
 #include <cmath>
-#include <vorbis/vorbis/vorbisfile.h>
 
 int globalSFXCount = 0;
 int stageSFXCount  = 0;
@@ -33,7 +32,7 @@ int currentMusicTrack = -1;
 #if RETRO_USING_SDL1 || RETRO_USING_SDL2
 
 #if RETRO_USING_SDL2
-SDL_AudioDeviceID audioDevice;
+SDL_AudioDeviceID audioDevice = 0;
 #endif
 SDL_AudioSpec audioDeviceFormat;
 
@@ -200,10 +199,119 @@ long tellVorbis(void *ptr)
 int closeVorbis(void *ptr) { return 1; }
 
 #if !RETRO_USE_ORIGINAL_CODE
-void ProcessMusicStream(Sint32* stream, size_t bytes_wanted)
+void ProcessMusicStream(Sint32 *stream, size_t bytes_wanted)
 {
-    (void)stream;
-    (void)bytes_wanted;
+    if (!streamFilePtr || !streamInfoPtr)
+        return;
+    if (!streamFilePtr->fileSize)
+        return;
+    switch (musicStatus) {
+        case MUSIC_READY:
+        case MUSIC_PLAYING: {
+#if RETRO_USING_SDL2
+            while (musicStatus == MUSIC_PLAYING && streamInfoPtr->stream && SDL_AudioStreamAvailable(streamInfoPtr->stream) < bytes_wanted) {
+                // We need more samples: get some
+                long bytes_read = ov_read(&streamInfoPtr->vorbisFile, (char *)streamInfoPtr->buffer, sizeof(streamInfoPtr->buffer), 0, 2, 1,
+                                          &streamInfoPtr->vorbBitstream);
+
+                if (bytes_read == 0) {
+                    // We've reached the end of the file
+                    if (streamInfoPtr->trackLoop) {
+                        ov_pcm_seek(&streamInfoPtr->vorbisFile, streamInfoPtr->loopPoint);
+                        continue;
+                    }
+                    else {
+                        musicStatus = MUSIC_STOPPED;
+                        break;
+                    }
+                }
+
+                if (musicStatus != MUSIC_PLAYING
+                    || (streamInfoPtr->stream && SDL_AudioStreamPut(streamInfoPtr->stream, streamInfoPtr->buffer, (int)bytes_read) == -1))
+                    return;
+            }
+
+            // Now that we know there are enough samples, read them and mix them
+            int bytes_done = SDL_AudioStreamGet(streamInfoPtr->stream, streamInfoPtr->buffer, (int)bytes_wanted);
+            if (bytes_done == -1) {
+                return;
+            }
+            if (bytes_done != 0)
+                ProcessAudioMixing(stream, streamInfoPtr->buffer, bytes_done / sizeof(Sint16), (bgmVolume * masterVolume) / MAX_VOLUME, 0);
+#endif
+
+#if RETRO_USING_SDL1
+            size_t bytes_gotten = 0;
+            byte *buffer        = (byte *)malloc(bytes_wanted);
+            memset(buffer, 0, bytes_wanted);
+            while (bytes_gotten < bytes_wanted) {
+                // We need more samples: get some
+                long bytes_read =
+                    ov_read(&oggFilePtr->vorbisFile, (char *)oggFilePtr->buffer,
+                            sizeof(oggFilePtr->buffer) > (bytes_wanted - bytes_gotten) ? (bytes_wanted - bytes_gotten) : sizeof(oggFilePtr->buffer),
+                            0, 2, 1, &oggFilePtr->vorbBitstream);
+
+                if (bytes_read == 0) {
+                    // We've reached the end of the file
+                    if (oggFilePtr->trackLoop) {
+                        ov_pcm_seek(&oggFilePtr->vorbisFile, oggFilePtr->loopPoint);
+                        continue;
+                    }
+                    else {
+                        musicStatus = MUSIC_STOPPED;
+                        break;
+                    }
+                }
+
+                if (bytes_read > 0) {
+                    memcpy(buffer + bytes_gotten, oggFilePtr->buffer, bytes_read);
+                    bytes_gotten += bytes_read;
+                }
+                else {
+                    PrintLog("Music read error: vorbis error: %d", bytes_read);
+                }
+            }
+
+            if (bytes_gotten > 0) {
+                SDL_AudioCVT convert;
+                MEM_ZERO(convert);
+                int cvtResult = SDL_BuildAudioCVT(&convert, oggFilePtr->spec.format, oggFilePtr->spec.channels, oggFilePtr->spec.freq,
+                                                  audioDeviceFormat.format, audioDeviceFormat.channels, audioDeviceFormat.freq);
+                if (cvtResult == 0) {
+                    if (convert.len_mult > 0) {
+                        convert.buf = (byte *)malloc(bytes_gotten * convert.len_mult);
+                        convert.len = bytes_gotten;
+                        memcpy(convert.buf, buffer, bytes_gotten);
+                        SDL_ConvertAudio(&convert);
+                    }
+                }
+
+                // Now that we know there are enough samples, read them and mix them
+                // int bytes_done = SDL_AudioStreamGet(oggFilePtr->stream, oggFilePtr->buffer, bytes_wanted);
+                // if (bytes_done == -1) {
+                //    return;
+                //}
+
+                if (cvtResult == 0)
+                    ProcessAudioMixing(stream, (const Sint16 *)convert.buf, bytes_gotten / sizeof(Sint16), (bgmVolume * masterVolume) / MAX_VOLUME,
+                                       0);
+
+                if (convert.len > 0 && convert.buf)
+                    free(convert.buf);
+            }
+            if (bytes_wanted > 0)
+                free(buffer);
+#endif
+
+            musicPosition = ov_pcm_tell(&streamInfoPtr->vorbisFile);
+            break;
+        }
+        case MUSIC_STOPPED:
+        case MUSIC_PAUSED:
+        case MUSIC_LOADING:
+            // dont play
+            break;
+    }
 }
 
 void ProcessAudioPlayback(void *userdata, Uint8 *stream, int len)
@@ -329,8 +437,94 @@ void ProcessAudioMixing(Sint32 *dst, const Sint16 *src, int len, int volume, sby
 
 void LoadMusic(void *userdata)
 {
-    (void)userdata;
-    musicStatus = MUSIC_STOPPED;
+    int oldStreamID = currentStreamIndex;
+    currentStreamIndex++;
+    currentStreamIndex %= STREAMFILE_COUNT;
+
+    LockAudioDevice();
+
+    if (streamFile[currentStreamIndex].fileSize > 0)
+        StopMusic(false);
+
+    FileInfo info;
+    if (LoadFile(musicTracks[currentMusicTrack].fileName, &info)) {
+        StreamInfo *strmInfo = &streamInfo[currentStreamIndex];
+
+        StreamFile *musFile = &streamFile[currentStreamIndex];
+        musFile->filePos    = 0;
+        musFile->fileSize   = info.vfileSize;
+        if (info.vfileSize > MUSBUFFER_SIZE)
+            musFile->fileSize = MUSBUFFER_SIZE;
+
+        FileRead(streamFile[currentStreamIndex].buffer, musFile->fileSize);
+        CloseFile();
+
+        unsigned long long samples = 0;
+        ov_callbacks callbacks;
+
+        callbacks.read_func  = readVorbis;
+        callbacks.seek_func  = seekVorbis;
+        callbacks.tell_func  = tellVorbis;
+        callbacks.close_func = closeVorbis;
+
+        int error = ov_open_callbacks(musFile, &strmInfo->vorbisFile, NULL, 0, callbacks);
+        if (error == 0) {
+            strmInfo->vorbBitstream = -1;
+            strmInfo->vorbisFile.vi = ov_info(&strmInfo->vorbisFile, -1);
+
+            samples = (unsigned long long)ov_pcm_total(&strmInfo->vorbisFile, -1);
+
+#if RETRO_USING_SDL2
+            strmInfo->stream = SDL_NewAudioStream(AUDIO_S16, strmInfo->vorbisFile.vi->channels, (int)strmInfo->vorbisFile.vi->rate,
+                                                  audioDeviceFormat.format, audioDeviceFormat.channels, audioDeviceFormat.freq);
+            if (!strmInfo->stream)
+                PrintLog("Failed to create stream: %s", SDL_GetError());
+#endif
+
+#if RETRO_USING_SDL1
+            playbackInfo->spec.format   = AUDIO_S16;
+            playbackInfo->spec.channels = playbackInfo->vorbisFile.vi->channels;
+            playbackInfo->spec.freq     = (int)playbackInfo->vorbisFile.vi->rate;
+#endif
+
+            if (musicStartPos) {
+                uint oldPos = (uint)ov_pcm_tell(&streamInfo[oldStreamID].vorbisFile);
+
+                float newPos  = oldPos * ((float)musicRatio * 0.0001); // 8,000 == 0.8, 10,000 == 1.0 (ratio / 10,000)
+                musicStartPos = fmod(newPos, samples);
+
+                ov_pcm_seek(&strmInfo->vorbisFile, musicStartPos);
+            }
+            musicStartPos = 0;
+
+            musicStatus         = MUSIC_PLAYING;
+            masterVolume        = MAX_VOLUME;
+            trackID             = currentMusicTrack;
+            strmInfo->trackLoop = musicTracks[currentMusicTrack].trackLoop;
+            strmInfo->loopPoint = musicTracks[currentMusicTrack].loopPoint;
+            strmInfo->loaded    = true;
+            streamFilePtr       = &streamFile[currentStreamIndex];
+            streamInfoPtr       = &streamInfo[currentStreamIndex];
+            currentMusicTrack   = -1;
+            musicPosition       = 0;
+        }
+        else {
+            musicStatus = MUSIC_STOPPED;
+            PrintLog("Failed to load vorbis! error: %d", error);
+            switch (error) {
+                default: PrintLog("Vorbis open error: Unknown (%d)", error); break;
+                case OV_EREAD: PrintLog("Vorbis open error: A read from media returned an error"); break;
+                case OV_ENOTVORBIS: PrintLog("Vorbis open error: Bitstream does not contain any Vorbis data"); break;
+                case OV_EVERSION: PrintLog("Vorbis open error: Vorbis version mismatch"); break;
+                case OV_EBADHEADER: PrintLog("Vorbis open error: Invalid Vorbis bitstream header"); break;
+                case OV_EFAULT: PrintLog("Vorbis open error: Internal logic fault; indicates a bug or heap / stack corruption"); break;
+            }
+        }
+    }
+    else {
+        musicStatus = MUSIC_STOPPED;
+    }
+    UnlockAudioDevice();
 }
 
 void SetMusicTrack(const char *filePath, byte trackID, bool loop, uint loopPoint)
@@ -442,57 +636,152 @@ void LoadSfx(char *filePath, byte sfxID)
                 }
                 else {
                     SDL_AudioCVT convert;
-                    int conversionNeeded =
-                        SDL_BuildAudioCVT(&convert, wav->format, wav->channels, wav->freq, audioDeviceFormat.format, audioDeviceFormat.channels,
-                                          audioDeviceFormat.freq);
-                    if (conversionNeeded >= 0) {
+                    MEM_ZERO(convert);
+                    int convertResult = SDL_BuildAudioCVT(&convert, wav->format, wav->channels, wav->freq, audioDeviceFormat.format,
+                                                          audioDeviceFormat.channels, audioDeviceFormat.freq);
+                    if (convertResult >= 0) {
                         size_t bufferSize = wav_length;
-                        if (conversionNeeded > 0)
-                            bufferSize *= convert.len_mult;
-
-                        byte *convertedBuffer = (byte *)malloc(bufferSize);
-                        if (convertedBuffer) {
-                            memcpy(convertedBuffer, wav_buffer, wav_length);
-                            size_t convertedLength = wav_length;
-                            bool conversionSucceeded = true;
-                            if (conversionNeeded > 0) {
-                                convert.buf = convertedBuffer;
-                                convert.len = wav_length;
-                                conversionSucceeded = SDL_ConvertAudio(&convert) == 0;
-                                if (conversionSucceeded)
-                                    convertedLength = convert.len_cvt;
-                            }
-
-                            if (conversionSucceeded) {
-                                LockAudioDevice();
-                                StrCopy(sfxList[sfxID].name, filePath);
-                                sfxList[sfxID].buffer = (Sint16 *)convertedBuffer;
-                                sfxList[sfxID].length = convertedLength / sizeof(Sint16);
-                                sfxList[sfxID].loaded = true;
-                                UnlockAudioDevice();
-                            }
-                            else {
-                                PrintLog("Unable to convert sfx: %s (error: %s)", info.fileName, SDL_GetError());
-                                free(convertedBuffer);
+                        if (convertResult > 0) {
+                            if (convert.len_mult <= 0 || wav_length > (size_t)-1 / (size_t)convert.len_mult) {
+                                PrintLog("Unable to convert sfx: %s (invalid conversion size)", info.fileName);
                                 sfxList[sfxID].loaded = false;
+                                SDL_FreeWAV(wav_buffer);
+                                return;
                             }
+                            bufferSize *= (size_t)convert.len_mult;
                         }
-                        else {
-                            PrintLog("Unable to allocate sfx buffer: %s", info.fileName);
+
+                        convert.buf = (byte *)malloc(bufferSize);
+                        if (!convert.buf) {
+                            PrintLog("Unable to allocate audio buffer for sfx: %s", info.fileName);
                             sfxList[sfxID].loaded = false;
+                            SDL_FreeWAV(wav_buffer);
+                            return;
                         }
+                        convert.len = wav_length;
+                        memcpy(convert.buf, wav_buffer, wav_length);
+                        if (convertResult > 0 && SDL_ConvertAudio(&convert) < 0) {
+                            PrintLog("Unable to convert sfx: %s (error: %s)", info.fileName, SDL_GetError());
+                            free(convert.buf);
+                            sfxList[sfxID].loaded = false;
+                            SDL_FreeWAV(wav_buffer);
+                            return;
+                        }
+
+                        LockAudioDevice();
+                        StrCopy(sfxList[sfxID].name, filePath);
+                        sfxList[sfxID].buffer = (Sint16 *)convert.buf;
+                        sfxList[sfxID].length = (convertResult > 0 ? convert.len_cvt : wav_length) / sizeof(Sint16);
+                        sfxList[sfxID].loaded = true;
+                        UnlockAudioDevice();
+                        SDL_FreeWAV(wav_buffer);
                     }
                     else {
-                        PrintLog("Unable to convert sfx: %s (error: %s)", info.fileName, SDL_GetError());
+                        PrintLog("Unable to read sfx: %s (error: %s)", info.fileName, SDL_GetError());
                         sfxList[sfxID].loaded = false;
+                        SDL_FreeWAV(wav_buffer);
                     }
-                    SDL_FreeWAV(wav_buffer);
                 }
             }
         }
         else if (type == 'o') {
-            PrintLog("Ogg SFX disabled for native PS4 build backend");
-            sfxList[sfxID].loaded = false;
+            // ogg sfx :(
+            OggVorbis_File vf;
+            ov_callbacks callbacks = OV_CALLBACKS_NOCLOSE;
+            vorbis_info *vinfo;
+            byte *buf;
+            SDL_AudioSpec spec;
+            int bitstream = -1;
+            long samplesize;
+            long samples;
+            int read, toRead;
+
+            currentStreamIndex++;
+            currentStreamIndex %= STREAMFILE_COUNT;
+
+            StreamFile *sfxFile = &streamFile[currentStreamIndex];
+            sfxFile->filePos    = 0;
+            sfxFile->fileSize   = info.vfileSize;
+            if (info.vfileSize > MUSBUFFER_SIZE)
+                sfxFile->fileSize = MUSBUFFER_SIZE;
+
+            FileRead(streamFile[currentStreamIndex].buffer, sfxFile->fileSize);
+            CloseFile();
+
+            callbacks.read_func  = readVorbis;
+            callbacks.seek_func  = seekVorbis;
+            callbacks.tell_func  = tellVorbis;
+            callbacks.close_func = closeVorbis;
+
+            // GetFileInfo(&info);
+            int error = ov_open_callbacks(sfxFile, &vf, NULL, 0, callbacks);
+            if (error != 0) {
+                ov_clear(&vf);
+                PrintLog("failed to load ogg sfx!");
+                return;
+            }
+
+            vinfo = ov_info(&vf, -1);
+
+            byte *audioBuf = NULL;
+            uint audioLen  = 0;
+            memset(&spec, 0, sizeof(SDL_AudioSpec));
+
+            spec.format   = AUDIO_S16;
+            spec.channels = vinfo->channels;
+            spec.freq     = (int)vinfo->rate;
+            spec.samples  = 4096; /* buffer size */
+
+            samples = (long)ov_pcm_total(&vf, -1);
+
+            audioLen = spec.size = (Uint32)(samples * spec.channels * 2);
+            audioBuf             = (byte *)malloc(audioLen);
+            buf                  = audioBuf;
+            toRead               = audioLen;
+
+            for (read = (int)ov_read(&vf, (char *)buf, toRead, 0, 2, 1, &bitstream); read > 0;
+                 read = (int)ov_read(&vf, (char *)buf, toRead, 0, 2, 1, &bitstream)) {
+                if (read < 0) {
+                    free(audioBuf);
+                    ov_clear(&vf);
+                    PrintLog("failed to read ogg sfx!");
+                    return;
+                }
+                toRead -= read;
+                buf += read;
+            }
+
+            ov_clear(&vf); // clears & closes vorbis file
+
+            /* Don't return a buffer that isn't a multiple of samplesize */
+            samplesize = ((spec.format & 0xFF) / 8) * spec.channels;
+            audioLen &= ~(samplesize - 1);
+
+            SDL_AudioCVT convert;
+            if (SDL_BuildAudioCVT(&convert, spec.format, spec.channels, spec.freq, audioDeviceFormat.format, audioDeviceFormat.channels,
+                                  audioDeviceFormat.freq)
+                > 0) {
+                convert.buf = (byte *)malloc(audioLen * convert.len_mult);
+                convert.len = audioLen;
+                memcpy(convert.buf, audioBuf, audioLen);
+                SDL_ConvertAudio(&convert);
+
+                LockAudioDevice();
+                StrCopy(sfxList[sfxID].name, filePath);
+                sfxList[sfxID].buffer = (Sint16 *)convert.buf;
+                sfxList[sfxID].length = convert.len_cvt / sizeof(Sint16);
+                sfxList[sfxID].loaded = true;
+                UnlockAudioDevice();
+                free(audioBuf);
+            }
+            else {
+                LockAudioDevice();
+                StrCopy(sfxList[sfxID].name, filePath);
+                sfxList[sfxID].buffer = (Sint16 *)audioBuf;
+                sfxList[sfxID].length = audioLen / sizeof(Sint16);
+                sfxList[sfxID].loaded = true;
+                UnlockAudioDevice();
+            }
         }
         else {
             // wtf lol
@@ -505,11 +794,24 @@ void LoadSfx(char *filePath, byte sfxID)
 void PlaySfx(int sfx, bool loop)
 {
     LockAudioDevice();
+
     int sfxChannelID = -1;
+
+    // Check if the sfx is already playing on a channel
     for (int c = 0; c < CHANNEL_COUNT; ++c) {
-        if (sfxChannels[c].sfxID == sfx || sfxChannels[c].sfxID == -1) {
+        if (sfxChannels[c].sfxID == sfx) {
             sfxChannelID = c;
             break;
+        }
+    }
+
+    // If there's not one already playing, find an unused/free channel
+    if (sfxChannelID == -1) {
+        for (int c = 0; c < CHANNEL_COUNT; ++c) {
+            if (sfxChannels[c].sfxID == -1) {
+                sfxChannelID = c;
+                break;
+            }
         }
     }
 
@@ -519,6 +821,7 @@ void PlaySfx(int sfx, bool loop)
     sfxInfo->sampleLength = sfxList[sfx].length;
     sfxInfo->loopSFX      = loop;
     sfxInfo->pan          = 0;
+
     UnlockAudioDevice();
 }
 void SetSfxAttributes(int sfx, int loopCount, sbyte pan)
@@ -541,11 +844,4 @@ void SetSfxAttributes(int sfx, int loopCount, sbyte pan)
     sfxInfo->pan         = pan;
     sfxInfo->sfxID       = sfx;
     UnlockAudioDevice();
-}
-// Force Recompile PS4
-struct OggVorbis_File;
-
-extern "C" int ov_clear(struct OggVorbis_File* vf) {
-    (void)vf;
-    return 0;
 }

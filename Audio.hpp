@@ -1,8 +1,5 @@
 #ifndef AUDIO_H
 #define AUDIO_H
-#include <RetroEngine.hpp>
-#include <cmath>
-#include <vorbis/vorbis/vorbisfile.h>
 
 #define TRACK_COUNT (0x10)
 #define SFX_COUNT   (0x100)
@@ -19,20 +16,12 @@
 
 #define MIX_BUFFER_SAMPLES (256)
 
-#include <cstring>
-
 #if RETRO_USING_SDL1 || RETRO_USING_SDL2
 
 #if RETRO_USING_SDL2
 extern SDL_AudioDeviceID audioDevice;
-#define LockAudioDevice() \
-    do { \
-        if (audioDevice) SDL_LockAudioDevice(audioDevice); \
-    } while (0)
-#define UnlockAudioDevice() \
-    do { \
-        if (audioDevice) SDL_UnlockAudioDevice(audioDevice); \
-    } while (0)
+#define LockAudioDevice()   do { if (audioEnabled && audioDevice > 0) SDL_LockAudioDevice(audioDevice); } while (0)
+#define UnlockAudioDevice() do { if (audioEnabled && audioDevice > 0) SDL_UnlockAudioDevice(audioDevice); } while (0)
 #else
 #define LockAudioDevice()   SDL_LockAudio()
 #define UnlockAudioDevice() SDL_UnlockAudio()
@@ -138,8 +127,6 @@ void ProcessAudioMixing(Sint32 *dst, const Sint16 *src, int len, int volume, sby
 #if !RETRO_USE_ORIGINAL_CODE
 inline void FreeMusInfo()
 {
-    // Clean up music stream info. If libvorbis is linked, call ov_clear,
-    // otherwise zero the structure to avoid referencing the external symbol.
     LockAudioDevice();
 
 #if RETRO_USING_SDL2
@@ -148,10 +135,10 @@ inline void FreeMusInfo()
     streamInfo[currentStreamIndex].stream = NULL;
 #endif
 
-#if defined(HAVE_OV_CLEAR)
     ov_clear(&streamInfo[currentStreamIndex].vorbisFile);
-#else
-    memset(&streamInfo[currentStreamIndex].vorbisFile, 0, sizeof(streamInfo[currentStreamIndex].vorbisFile));
+
+#if RETRO_USING_SDL2
+    streamInfo[currentStreamIndex].stream = nullptr;
 #endif
 
     UnlockAudioDevice();
@@ -163,14 +150,7 @@ void ProcessAudioPlayback() {}
 void ProcessAudioMixing() {}
 
 #if !RETRO_USE_ORIGINAL_CODE
-inline void FreeMusInfo()
-{
-#if defined(HAVE_OV_CLEAR)
-    ov_clear(&streamInfo[currentStreamIndex].vorbisFile);
-#else
-    memset(&streamInfo[currentStreamIndex].vorbisFile, 0, sizeof(streamInfo[currentStreamIndex].vorbisFile));
-#endif
-}
+inline void FreeMusInfo() { ov_clear(&streamInfo[currentStreamIndex].vorbisFile); }
 #endif
 #endif
 

@@ -44,6 +44,17 @@ for %%f in (*.c) do (
     if errorlevel 1 exit /b 1
 )
 
+Rem Build the Ogg/Vorbis decoder from the sources shipped with the PS4 toolchain
+for %%f in (bitwise.c framing.c) do (
+    clang --target=x86_64-pc-freebsd12-elf -fPIC -funwind-tables -I"%CD%" -I"%OO_PS4_TOOLCHAIN%\include" -I"%OO_PS4_TOOLCHAIN%\include\c++\v1" %extra_flags% -c -o "%intdir%\ogg_%%~nf.o" "%OO_PS4_TOOLCHAIN%\include\ogg\%%f"
+    if errorlevel 1 exit /b 1
+)
+
+for %%f in (mdct.c smallft.c block.c envelope.c window.c lsp.c lpc.c analysis.c synthesis.c psy.c info.c floor1.c floor0.c res0.c mapping0.c registry.c codebook.c sharedbook.c lookup.c bitrate.c vorbisfile.c) do (
+    clang --target=x86_64-pc-freebsd12-elf -fPIC -funwind-tables -I"%CD%" -I"%OO_PS4_TOOLCHAIN%\include" -I"%OO_PS4_TOOLCHAIN%\include\c++\v1" %extra_flags% -c -o "%intdir%\vorbis_%%~nf.o" "%OO_PS4_TOOLCHAIN%\include\vorbis\%%f"
+    if errorlevel 1 exit /b 1
+)
+
 for %%f in (*.cpp) do (
     clang++ --target=x86_64-pc-freebsd12-elf -fPIC -funwind-tables -I"%CD%" -I"%OO_PS4_TOOLCHAIN%\include" -I"%OO_PS4_TOOLCHAIN%\include\c++\v1" %extra_flags% -c -o "%intdir%\%%~nf.o" "%%~nf.cpp"
     if errorlevel 1 exit /b 1

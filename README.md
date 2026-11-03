@@ -37,9 +37,8 @@
 - https://claude.ai/ - For aiding in helping me understand Piglet and the ps4 and fixing up some code.
 
 - 𝓗𝓪𝓻𝓾 (endou.haru.fr) - on discord for helping me fix memory issues.
-- OpenOrbis toolchain
+- 
 - flatz (Piglet / OpenGL ES on PS4)
-- Everyone who documented the canvas authinfo and module loading requirements
 
 ---
 Hope you enjoy! took 6 months to do.

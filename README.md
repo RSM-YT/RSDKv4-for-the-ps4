@@ -7,7 +7,6 @@
 - Support for Sonic 1 and Sonic 2.
 - mod loading
 - SDL2 for input and (partial) audio
-- Works on firmware 13.52 with GoldHEN
 
 ### Building
 - OpenOrbis PS4 Toolchain

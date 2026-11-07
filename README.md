@@ -22,22 +22,24 @@
 - Add the Scripts folder to /data/RSDKv4. Ps4 is case sensitive so DO NOT CHANGE IT
 - Run the application once. if it fails to load, reboot and run it 1-3 times
 - If it still fails to load then create the directories: </data/self/system/common/lib> and drag both .sprx files in there
+- Tested on 13.52 and 14.00. With Goldhen v2.4b18.12. PS5 is not supported (tested)
   
 ### Status
 - Gameplay and rendering working
 - Title screen and stages load
 - Audio device selection now works
 - Mod support.
+- A little bit unstable. Will cause some kernels but a full brick is rare.
 
 ### Credits
 - https://github.com/RSDKModding/RSDKv4-Decompilation - rubber ducky for base code and other things
 
-- https://github.com/openorbis - compilkation and other things
+- https://github.com/openorbis - compilation and other things
 
 - https://claude.ai/ - For aiding in helping me understand Piglet and the ps4 and fixing up some code.
 
 - 𝓗𝓪𝓻𝓾 (endou.haru.fr) - on discord for helping me fix memory issues.
-- 
+  
 - flatz (Piglet / OpenGL ES on PS4)
 
 ---

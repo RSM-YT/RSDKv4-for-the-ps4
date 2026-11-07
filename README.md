@@ -29,6 +29,7 @@
 - Audio device selection now works
 - Mod support.
 - A little bit unstable. Will cause some kernels but a full brick is rare.
+- Still need to implement ps4 specific features for my lovely modders
 
 ### Credits
 - https://github.com/RSDKModding/RSDKv4-Decompilation - rubber ducky for base code and other things
@@ -43,3 +44,5 @@
 
 ---
 Hope you enjoy! took 6 months to do.
+
+Sonic 1 forever is coming.
